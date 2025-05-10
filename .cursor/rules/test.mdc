@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Unit Test
+
+- Use vitest to write test
+- Test file should be in the same folder of the tested file with spec added to the name. ([filename].spec.ts)
+- Use it instead of test to wrap unit tests
+- Add types in tsconfig.json instead of import describe, it, expect etc. from 'vitest' package
+
