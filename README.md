@@ -1,3 +1,7 @@
+<div style="text-align: center; margin-bottom: 20px">
+  <img style="max-width: 200px" src="./src/assets/goodbye-affiliate-link.png" alt="Goodbye Affiliate Link" />
+</div>
+
 # Goodbye Affiliate Link
 
 ページ中のアフィリエイトリンクを元々のURLに戻すChrome拡張機能です。
