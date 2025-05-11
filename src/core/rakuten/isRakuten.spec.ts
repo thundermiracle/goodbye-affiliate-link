@@ -10,4 +10,4 @@ describe("isRakuten", () => {
     ])("%s", (url, expected) => {
       expect(isRakuten(url)).toBe(expected);
     });
-}); 
+});
