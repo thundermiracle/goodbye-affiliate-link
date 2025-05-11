@@ -1,2 +1,2 @@
-export * from './isAccessTrade';
-export * from './getAccessTradeOriginal'; 
+export * from "./isAccessTrade";
+export * from "./getAccessTradeOriginal";

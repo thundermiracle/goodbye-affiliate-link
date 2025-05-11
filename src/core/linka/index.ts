@@ -1,2 +1,2 @@
-export * from './isLinkA';
-export * from './getLinkAOriginal'; 
+export * from "./isLinkA";
+export * from "./getLinkAOriginal";

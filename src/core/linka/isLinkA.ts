@@ -3,6 +3,6 @@
  * @param url https://cl.link-ag.net/... or https://link-a.net/...
  */
 export function isLinkA(url: string): boolean {
-    const linkARegex = /^https?:\/\/(?:(?:cl\.)?link-ag\.net|link-a\.net)\/.*/;
-    return linkARegex.test(url);
-} 
+  const linkARegex = /^https?:\/\/(?:(?:cl\.)?link-ag\.net|link-a\.net)\/.*/;
+  return linkARegex.test(url);
+}

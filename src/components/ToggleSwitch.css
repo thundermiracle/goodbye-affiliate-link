@@ -48,9 +48,9 @@
 }
 
 .toggle-switch-checkbox:checked + .toggle-switch-button {
-  background-color: #FF9900;
+  background-color: #ff9900;
 }
 
 .toggle-switch-checkbox:checked + .toggle-switch-button:before {
   transform: translateX(16px);
-} 
+}

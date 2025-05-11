@@ -2,26 +2,26 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: pnpm/action-setup@v3
-      with:
-        version: "latest"
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: .nvmrc
-        cache: 'pnpm'
-    - name: Install dependencies
-      run: pnpm install
-    - name: Run tests
-      run: pnpm test
-    - name: Build
-      run: pnpm build && pnpm build:firefox
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: "latest"
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build && pnpm build:firefox

@@ -1,8 +1,8 @@
-import logo from '@/assets/goodbye-affiliate-link.png';
-import './App.css';
-import { SETTINGS_KEYS, SettingsType } from '@/services/settings';
-import { useState, useEffect } from 'react';
-import { loadSettings, saveSetting } from '@/services/settings';
+import logo from "@/assets/goodbye-affiliate-link.png";
+import "./App.css";
+import { SETTINGS_KEYS, SettingsType } from "@/services/settings";
+import { useState, useEffect } from "react";
+import { loadSettings, saveSetting } from "@/services/settings";
 
 function App() {
   const [settings, setSettings] = useState<SettingsType | null>(null);
@@ -53,19 +53,12 @@ function App() {
               id="enabled"
               label="有効"
               defaultChecked={settings.enabled}
-              onChange={(checked) =>
-                handleToggleChange(
-                  SETTINGS_KEYS.ENABLED,
-                  checked
-                )
-              }
+              onChange={(checked) => handleToggleChange(SETTINGS_KEYS.ENABLED, checked)}
             />
           </div>
         )}
 
-        <p>
-          ページ中のアフィリエイトリンクを元々のURLに戻すChrome拡張機能です。
-        </p>
+        <p>ページ中のアフィリエイトリンクを元々のURLに戻すChrome拡張機能です。</p>
       </div>
     </>
   );

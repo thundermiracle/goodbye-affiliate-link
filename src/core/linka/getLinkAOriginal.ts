@@ -5,5 +5,5 @@ import { resolveRedirects } from "../utils";
  * @param url https://cl.link-ag.net/... or https://link-a.net/...
  */
 export async function getLinkAOriginal(url: string): Promise<string> {
-    return await resolveRedirects(url);
-} 
+  return await resolveRedirects(url);
+}

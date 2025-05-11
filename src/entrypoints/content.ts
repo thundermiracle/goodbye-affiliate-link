@@ -1,9 +1,8 @@
-export async function init() {
-}
+export async function init() {}
 
 // コンテンツスクリプトのエントリーポイント
 export default defineContentScript({
-  matches: ["*://*/*"],  
+  matches: ["*://*/*"],
   runAt: "document_end",
   main() {
     init();

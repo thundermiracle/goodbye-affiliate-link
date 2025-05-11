@@ -1,2 +1,2 @@
-export * from './isValueCommerce';
-export * from './getValueCommerceOriginal'; 
+export * from "./isValueCommerce";
+export * from "./getValueCommerceOriginal";

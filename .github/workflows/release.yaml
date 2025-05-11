@@ -36,7 +36,7 @@ jobs:
 
   Submit:
     permissions:
-      id-token: write  # Workload Identityのために必要
+      id-token: write # Workload Identityのために必要
       contents: write
     needs: Version
     if: ${{ needs.Version.outputs.version_changed == '1' }}

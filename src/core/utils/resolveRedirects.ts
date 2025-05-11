@@ -5,7 +5,7 @@
  */
 export async function resolveRedirects(
   initialUrl: string,
-  maxRedirects: number = 10
+  maxRedirects: number = 10,
 ): Promise<string> {
   let url = initialUrl;
 

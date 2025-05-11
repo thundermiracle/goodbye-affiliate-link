@@ -1,2 +1,2 @@
-export * from './isMoshimo';
-export * from './getMoshimoOriginal'; 
+export * from "./isMoshimo";
+export * from "./getMoshimoOriginal";

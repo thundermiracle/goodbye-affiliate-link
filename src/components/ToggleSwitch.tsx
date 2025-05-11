@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import './ToggleSwitch.css';
+import { useState, useEffect, useCallback } from "react";
+import "./ToggleSwitch.css";
 
 interface ToggleSwitchProps {
   id: string;
@@ -38,4 +38,4 @@ export function ToggleSwitch({ id, label, defaultChecked, onChange }: ToggleSwit
       </div>
     </div>
   );
-} 
+}

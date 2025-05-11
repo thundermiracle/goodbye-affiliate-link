@@ -1,2 +1,2 @@
-export * from './isRakuten';
-export * from './getRakutenOriginal'; 
+export * from "./isRakuten";
+export * from "./getRakutenOriginal";

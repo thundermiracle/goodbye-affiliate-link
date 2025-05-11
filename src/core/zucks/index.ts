@@ -1,2 +1,2 @@
-export * from './isZucks';
-export * from './getZucksOriginal'; 
+export * from "./isZucks";
+export * from "./getZucksOriginal";

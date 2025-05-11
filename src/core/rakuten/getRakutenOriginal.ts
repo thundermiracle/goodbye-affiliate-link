@@ -5,5 +5,5 @@ import { resolveRedirects } from "../utils";
  * @param url https://hb.afl.rakuten.co.jp/ichiba/00000000.XXXXXXXX.YYYYYYYY.ZZZZZZZZ/...
  */
 export async function getRakutenOriginal(url: string): Promise<string> {
-    return await resolveRedirects(url);
-} 
+  return await resolveRedirects(url);
+}

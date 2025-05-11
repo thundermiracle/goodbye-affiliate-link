@@ -1,2 +1,2 @@
-export * from './isAmazon';
-export * from './getAmazonOriginal'; 
+export * from "./isAmazon";
+export * from "./getAmazonOriginal";

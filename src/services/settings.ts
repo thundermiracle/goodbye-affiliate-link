@@ -1,6 +1,6 @@
 // Define keys for the settings
 export const SETTINGS_KEYS = {
-  ENABLED: 'enabled'
+  ENABLED: "enabled",
 } as const;
 
 // Define the Settings type
@@ -23,12 +23,12 @@ export async function loadSettings(): Promise<SettingsType> {
   return new Promise((resolve) => {
     chrome.storage.local.get(Object.values(SETTINGS_KEYS), (result) => {
       const settings: SettingsType = { ...DEFAULT_SETTINGS };
-      
+
       // Only override default values if they exist in storage
       if (result[SETTINGS_KEYS.ENABLED] !== undefined) {
         settings.enabled = result[SETTINGS_KEYS.ENABLED];
       }
-      
+
       resolve(settings);
     });
   });
@@ -41,4 +41,4 @@ export async function saveSetting(key: string, value: boolean): Promise<void> {
       resolve();
     });
   });
-} 
+}

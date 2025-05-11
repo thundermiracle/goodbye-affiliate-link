@@ -5,5 +5,5 @@ import { resolveRedirects } from "../utils";
  * @param url https://get.mobu.jp/redirect/<ID>
  */
 export async function getZucksOriginal(url: string): Promise<string> {
-    return await resolveRedirects(url);
-} 
+  return await resolveRedirects(url);
+}

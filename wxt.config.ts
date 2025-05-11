@@ -1,4 +1,4 @@
-import { defineConfig } from 'wxt';
+import { defineConfig } from "wxt";
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -7,16 +7,15 @@ export default defineConfig({
   outDir: "dist",
   manifest: {
     name: "Goodbye Affiliate Link",
-    description:
-      "ページ中のアフィリエイトリンクを元々のURLに戻すChrome拡張機能です。",
+    description: "ページ中のアフィリエイトリンクを元々のURLに戻すChrome拡張機能です。",
     version: "1.0.0",
     permissions: ["storage"],
     host_permissions: ["*://*/*"],
     browser_specific_settings: {
       gecko: {
         id: "goodbye-affiliate-link@thundermiracle.com",
-      }
-    }
+      },
+    },
   },
   webExt: {
     binaries: {
