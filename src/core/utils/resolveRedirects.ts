@@ -14,6 +14,8 @@ export async function resolveRedirects(
       redirect: "manual",
     });
 
+    console.log(res.status, res);
+
     // 3xx 系ステータスなら Location ヘッダを取得して次へ
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get("location");
