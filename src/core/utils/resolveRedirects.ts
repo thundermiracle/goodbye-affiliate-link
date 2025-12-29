@@ -10,11 +10,25 @@ export async function resolveRedirects(
   let url = initialUrl;
 
   for (let ind = 0; ind < maxRedirects; ind++) {
-    const res = await fetch(url, {
-      redirect: "manual",
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    console.log(res.status, res);
+    let res;
+    try {
+      res = await fetch(url, {
+        redirect: "manual",
+        signal: controller.signal,
+      });
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") {
+        console.error(`Request timed out for ${url}`);
+      } else {
+        console.error(`Failed to fetch ${url}`, e);
+      }
+      break;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     // 3xx 系ステータスなら Location ヘッダを取得して次へ
     if (res.status >= 300 && res.status < 400) {

@@ -10,7 +10,26 @@ import { resolveRedirects } from "./resolveRedirects";
  */
 export async function resolveRedirectsOfValueCommerce(referralUrl: string): Promise<string> {
   // 1. HTML 取得
-  const html = await fetch(referralUrl, { credentials: "omit" }).then((r) => r.text());
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  let html = "";
+  try {
+    const res = await fetch(referralUrl, {
+      credentials: "omit",
+      signal: controller.signal,
+    });
+    html = await res.text();
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === "AbortError") {
+      console.error(`Request timed out for ${referralUrl}`);
+    } else {
+      console.error(`Failed to fetch ${referralUrl}`, e);
+    }
+    return referralUrl;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // 2. meta refresh で埋め込まれた URL を取得
   const metaRegex =
