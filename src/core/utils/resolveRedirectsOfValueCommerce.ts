@@ -14,12 +14,14 @@ export async function resolveRedirectsOfValueCommerce(referralUrl: string): Prom
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   let html = "";
+  let resUrl = "";
   try {
     const res = await fetch(referralUrl, {
       credentials: "omit",
       signal: controller.signal,
     });
     html = await res.text();
+    resUrl = res.url;
   } catch (e: unknown) {
     if (e instanceof Error && e.name === "AbortError") {
       console.error(`Request timed out for ${referralUrl}`);
@@ -57,5 +59,10 @@ export async function resolveRedirectsOfValueCommerce(referralUrl: string): Prom
   }
 
   // 取得できなかった場合
+  // 4. res.url がリダイレクトされていたらそれを返す
+  if (resUrl && resUrl !== referralUrl) {
+    return resUrl;
+  }
+
   return referralUrl;
 }
