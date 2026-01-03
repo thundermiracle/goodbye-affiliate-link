@@ -22,20 +22,34 @@ export async function resolveLinksWithChunks(
   const chunks = chunkArray(links, chunkSize);
 
   for (const chunk of chunks) {
-    const promises = chunk.map(async (link) => {
-      for (const [siteName, { isAffiliateLink, getOriginalLink }] of Object.entries(affiliateMap)) {
-        if (isAffiliateLink(link)) {
-          try {
-            const original = await getOriginalLink(link);
-            console.log(`${siteName}: ${link} -> ${original}`);
-            return { link, original };
-          } catch (e) {
-            console.error(`Failed to resolve ${link} for ${siteName}`, e);
-            return { link, original: link };
+    const promises = chunk.map(async (initialLink) => {
+      let currentLink = initialLink;
+
+      for (let i = 0; i < 3; i++) {
+        let changed = false;
+        for (const [siteName, { isAffiliateLink, getOriginalLink }] of Object.entries(
+          affiliateMap,
+        )) {
+          if (isAffiliateLink(currentLink)) {
+            try {
+              const nextLink = await getOriginalLink(currentLink);
+              if (nextLink !== currentLink) {
+                console.log(`[${i + 1}] ${siteName}: ${currentLink} -> ${nextLink}`);
+                currentLink = nextLink;
+                changed = true;
+                break; // Move to next iteration of depth loop with new link
+              }
+            } catch (e) {
+              console.error(`Failed to resolve ${currentLink} for ${siteName}`, e);
+              // If error, stop resolving this chain
+              return { link: initialLink, original: currentLink };
+            }
           }
         }
+        if (!changed) break; // If no affiliate matched or no change, stop
       }
-      return { link, original: link };
+
+      return { link: initialLink, original: currentLink };
     });
 
     const results = await Promise.all(promises);
