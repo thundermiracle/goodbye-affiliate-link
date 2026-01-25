@@ -34,11 +34,13 @@ export async function resolveRedirectsOfValueCommerce(referralUrl: string): Prom
   }
 
   // 2. meta refresh で埋め込まれた URL を取得
+  // 属性の順序に関わらず、content または http-equiv のいずれかを先に持つメタタグに対応
   const metaRegex =
-    /<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\s*URL=([^"']+)["']/i;
+    /<meta[^>]+content=["']([^"']*;\s*URL=([^"']+))["'][^>]*http-equiv=["']refresh["']|<meta[^>]+http-equiv=["']refresh["'][^>]*content=["']([^"']*;\s*URL=([^"']+))["']/i;
   const metaMatch = metaRegex.exec(html);
-  if (metaMatch) {
-    const decodedMetaUrl = decodeURIComponent(metaMatch[1]);
+  const metaUrl = metaMatch ? metaMatch[2] || metaMatch[4] : null;
+  if (metaUrl) {
+    const decodedMetaUrl = decodeURIComponent(metaUrl);
     try {
       const uri = new URL(decodedMetaUrl);
       const viewParam = uri.searchParams.get("VIEW_URL");

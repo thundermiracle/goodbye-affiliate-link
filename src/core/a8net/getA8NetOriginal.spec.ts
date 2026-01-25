@@ -80,13 +80,19 @@ describe("getA8NetOriginal", () => {
     const mockFetch = global.fetch as any;
     mockFetch.mockRejectedValue(new Error("Blocked"));
 
-    const targetUrl =
-      "http://hb.afl.rakuten.co.jp/hgc/0ea62065.34400275.0ea62066.204f04c0/a16052887959_2NKOAY_FM1AXE_2HOM_BW8O1?pc=https%3A%2F%2Fproduct.rakuten.co.jp%2Fproduct%2F-%2F1f733aaf3ca567abb7da7469710eeb8b%2F&m=https%3A%2F%2Fproduct.rakuten.co.jp%2Fproduct%2F-%2F1f733aaf3ca567abb7da7469710eeb8b%2F";
+    const targetUrl = "https://product.rakuten.co.jp/product/-/1f733aaf3ca567abb7da7469710eeb8b/";
     // User provided URL
     const a8Link =
       "https://rpx.a8.net/svt/ejp?a8mat=2NKOAY+FM1AXE+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa16052887959_2NKOAY_FM1AXE_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fproduct.rakuten.co.jp%252Fproduct%252F-%252F1f733aaf3ca567abb7da7469710eeb8b%252F%26m%3Dhttps%253A%252F%252Fproduct.rakuten.co.jp%252Fproduct%252F-%252F1f733aaf3ca567abb7da7469710eeb8b%252F";
 
     const result = await getA8NetOriginal(a8Link);
     expect(result).toBe(targetUrl);
+  });
+
+  it("should resolve rakuten link", async () => {
+    const result = await getA8NetOriginal(
+      "https://rpx.a8.net/svt/ejp?a8mat=2NKOAY+FM1AXE+2HOM+BW8O1&rakuten=y&a8ejpredirect=http%3A%2F%2Fhb.afl.rakuten.co.jp%2Fhgc%2F0ea62065.34400275.0ea62066.204f04c0%2Fa16052887959_2NKOAY_FM1AXE_2HOM_BW8O1%3Fpc%3Dhttps%253A%252F%252Fevent.rakuten.co.jp%252Fcampaign%252Fcard%252Fpointday%252F%26m%3Dhttps%253A%252F%252Fevent.rakuten.co.jp%252Fcampaign%252Fcard%252Fpointday%252F",
+    );
+    expect(result).toBe("https://event.rakuten.co.jp/campaign/card/pointday/");
   });
 });

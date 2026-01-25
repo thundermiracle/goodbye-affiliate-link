@@ -1,6 +1,16 @@
 import { fixIncompleteUrl, resolveRedirects } from "../utils";
+import { getRakutenOriginal } from "../rakuten/getRakutenOriginal";
 
 export async function getA8NetOriginal(url: string): Promise<string> {
+  const finalUrl = await getA8NetOriginalInternal(url);
+  if (finalUrl.includes("hb.afl.rakuten.co.jp")) {
+    return await getRakutenOriginal(finalUrl);
+  }
+
+  return finalUrl;
+}
+
+async function getA8NetOriginalInternal(url: string): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -49,6 +59,23 @@ export async function getA8NetOriginal(url: string): Promise<string> {
     return fallbackToQueryParams(url);
   } finally {
     clearTimeout(timeoutId);
+  }
+
+  const controller2 = new AbortController();
+  const timeoutId2 = setTimeout(() => controller2.abort(), 5000);
+  try {
+    const resFollow = await fetch(url, {
+      redirect: "follow",
+      credentials: "omit",
+      signal: controller2.signal,
+    });
+
+    // If we were redirected, res.url will be different from the original url
+    if (resFollow.url && resFollow.url !== url) {
+      return resFollow.url;
+    }
+  } finally {
+    clearTimeout(timeoutId2);
   }
 
   return url;

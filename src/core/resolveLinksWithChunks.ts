@@ -1,4 +1,5 @@
 import { affiliateMap } from "./affiliateMap";
+import { purifyResolvedUrl } from "./utils";
 
 /**
  * break array into chunks
@@ -49,7 +50,8 @@ export async function resolveLinksWithChunks(
         if (!changed) break; // If no affiliate matched or no change, stop
       }
 
-      return { link: initialLink, original: currentLink };
+      const purified = purifyResolvedUrl(currentLink);
+      return { link: initialLink, original: purified };
     });
 
     const results = await Promise.all(promises);

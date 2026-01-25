@@ -17,6 +17,11 @@ vi.mock("./affiliateMap", () => {
         isAffiliateLink: (url: string) => url.includes("amazon.co.jp"),
         getOriginalLink: (url: string) => Promise.resolve("https://www.amazon.co.jp/clean"),
       },
+      rakutenTest: {
+        isAffiliateLink: (url: string) => url.includes("rakuten-aff"),
+        getOriginalLink: (url: string) =>
+          Promise.resolve("https://www.rakuten.co.jp/item/?scid=abc&sc2id=def&foo=bar"),
+      },
     },
   };
 });
@@ -38,5 +43,12 @@ describe("resolveLinksWithChunks", () => {
     // Create a circular ref or deep chain to test limit if needed,
     // but for now verifying it goes at least 2 hops is good.
     // The mock above does 2 hops: A -> B -> Final.
+  });
+
+  it("should purify rakuten parameters in the final url", async () => {
+    const link = "https://rakuten-aff.example/link";
+    const resolved = await resolveLinksWithChunks([link]);
+
+    expect(resolved[link]).toBe("https://www.rakuten.co.jp/item/?foo=bar");
   });
 });
