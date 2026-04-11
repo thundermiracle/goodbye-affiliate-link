@@ -1,9 +1,10 @@
 import { ResolveAffiliateLinksMessage, ResolveAffiliateLinksResponse } from "@/core";
-import { loadSettings } from "@/services/settings";
+import { SETTINGS_KEYS, loadSettings } from "@/services/settings";
 
 const resolvedCache = new Map<string, string>();
 const pendingLinks = new Set<string>();
 let resolveTimer: number | null = null;
+let observer: MutationObserver | null = null;
 
 function applyResolvedLinks(anchors: HTMLAnchorElement[]) {
   for (const anchor of anchors) {
@@ -66,10 +67,22 @@ function enqueueAnchors(anchors: HTMLAnchorElement[]) {
   }
 }
 
+function stopObserving() {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+  pendingLinks.clear();
+  if (resolveTimer !== null) {
+    window.clearTimeout(resolveTimer);
+    resolveTimer = null;
+  }
+}
+
 function observeAnchors() {
   if (!document.body) return;
 
-  const observer = new MutationObserver((mutations) => {
+  observer = new MutationObserver((mutations) => {
     const anchors: HTMLAnchorElement[] = [];
 
     for (const mutation of mutations) {
@@ -103,17 +116,29 @@ function observeAnchors() {
   });
 }
 
-async function init() {
-  const { enabled } = await loadSettings();
-
-  if (enabled === false) {
-    return;
-  }
-
-  // get all links from document
+function startProcessing() {
   const anchorElements = Array.from(document.querySelectorAll<HTMLAnchorElement>("a"));
   enqueueAnchors(anchorElements);
   observeAnchors();
+}
+
+async function init() {
+  const { enabled } = await loadSettings();
+
+  if (enabled !== false) {
+    startProcessing();
+  }
+
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes[SETTINGS_KEYS.ENABLED]) {
+      const isEnabled = changes[SETTINGS_KEYS.ENABLED].newValue === true;
+      if (isEnabled) {
+        startProcessing();
+      } else {
+        stopObserving();
+      }
+    }
+  });
 }
 
 // コンテンツスクリプトのエントリーポイント
