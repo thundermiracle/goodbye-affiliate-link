@@ -9,8 +9,8 @@ function applyResolvedLinks(anchors: HTMLAnchorElement[]) {
   for (const anchor of anchors) {
     const resolved = resolvedCache.get(anchor.href);
     if (resolved && resolved !== anchor.href) {
+      resolvedCache.set(resolved, resolved);
       anchor.href = resolved;
-    } else if (resolved) {
     }
   }
 }
