@@ -26,7 +26,7 @@ export async function loadSettings(): Promise<SettingsType> {
 
       // Only override default values if they exist in storage
       if (result[SETTINGS_KEYS.ENABLED] !== undefined) {
-        settings.enabled = result[SETTINGS_KEYS.ENABLED];
+        settings.enabled = result[SETTINGS_KEYS.ENABLED] === true;
       }
 
       resolve(settings);
