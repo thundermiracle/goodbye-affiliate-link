@@ -56,12 +56,46 @@ export async function resolveRedirectsOfValueCommerce(referralUrl: string): Prom
   const jsRedirectRegex = /window\.location\.replace\(\s*['"]([^'"]+)['"]\s*\)/;
   const jsMatch = jsRedirectRegex.exec(html);
   if (jsMatch) {
+    // JS redirect URL 内にも VIEW_URL が含まれる場合は直接抽出
+    const jsUrl = decodeURIComponent(jsMatch[1]);
+    try {
+      const jsUri = new URL(fixIncompleteUrl(jsUrl));
+      const uParam = jsUri.searchParams.get("u");
+      if (uParam) {
+        const innerUri = new URL(decodeURIComponent(uParam));
+        const viewUrl = innerUri.searchParams.get("VIEW_URL");
+        if (viewUrl) {
+          return decodeURIComponent(viewUrl);
+        }
+      }
+    } catch {
+      // URL パース失敗時はリダイレクト追跡へ
+    }
     const nextUrl = fixIncompleteUrl(jsMatch[1]);
     return await resolveRedirects(nextUrl);
   }
 
-  // 取得できなかった場合
-  // 4. res.url がリダイレクトされていたらそれを返す
+  // 4. 最終フォールバック: HTML 全体から VIEW_URL を直接検索
+  const viewUrlRegex = /VIEW_URL[=%3D]+([^&"'\s<]+)/i;
+  const viewUrlMatch = viewUrlRegex.exec(html);
+  if (viewUrlMatch) {
+    try {
+      let viewUrl = viewUrlMatch[1];
+      // 多重エンコードに対応（最大3回デコード）
+      for (let i = 0; i < 3; i++) {
+        const decoded = decodeURIComponent(viewUrl);
+        if (decoded === viewUrl) break;
+        viewUrl = decoded;
+      }
+      if (viewUrl.startsWith("http")) {
+        return viewUrl;
+      }
+    } catch {
+      // デコード失敗時は次のフォールバックへ
+    }
+  }
+
+  // 5. res.url がリダイレクトされていたらそれを返す
   if (resUrl && resUrl !== referralUrl) {
     return resUrl;
   }
