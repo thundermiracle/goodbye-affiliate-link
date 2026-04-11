@@ -74,6 +74,8 @@ async function getA8NetOriginalInternal(url: string): Promise<string> {
     if (resFollow.url && resFollow.url !== url) {
       return resFollow.url;
     }
+  } catch (e) {
+    console.error(`Fallback fetch failed for ${url}`, e);
   } finally {
     clearTimeout(timeoutId2);
   }
