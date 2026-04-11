@@ -10,8 +10,9 @@ export async function getAmazonOriginal(url: string): Promise<string> {
     url = await resolveRedirects(url);
   }
 
-  // Remove the tag parameter
+  // Remove affiliate parameters
   const urlObj = new URL(url);
   urlObj.searchParams.delete("tag");
+  urlObj.searchParams.delete("linkCode");
   return urlObj.toString();
 }
