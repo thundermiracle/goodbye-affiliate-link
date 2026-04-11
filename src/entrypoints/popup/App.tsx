@@ -32,6 +32,11 @@ function App() {
         ...settings,
         [key]: checked,
       });
+
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        chrome.tabs.reload(tab.id);
+      }
     } catch (error) {
       console.error(`Failed to save setting for ${key}:`, error);
     }
