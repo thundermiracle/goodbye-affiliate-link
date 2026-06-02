@@ -51,4 +51,18 @@ describe("resolveLinksWithChunks", () => {
 
     expect(resolved[link]).toBe("https://www.rakuten.co.jp/item/?foo=bar");
   });
+
+  it("should resolve unknown wrappers via the generic embedded-url fallback", async () => {
+    const link = "https://unknown-asp.example/redirect?url=https%3A%2F%2Fshop.example%2Fitem";
+    const resolved = await resolveLinksWithChunks([link]);
+
+    expect(resolved[link]).toBe("https://shop.example/item");
+  });
+
+  it("should leave ordinary links untouched (no false-positive rewrite)", async () => {
+    const link = "https://blog.example/article?ref=newsletter&id=42";
+    const resolved = await resolveLinksWithChunks([link]);
+
+    expect(resolved).not.toHaveProperty(link);
+  });
 });

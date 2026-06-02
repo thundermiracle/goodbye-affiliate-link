@@ -1,4 +1,5 @@
 import { affiliateMap } from "./affiliateMap";
+import { extractEmbeddedUrl } from "./utils/extractEmbeddedUrl";
 import { purifyResolvedUrl } from "./utils";
 
 /**
@@ -47,6 +48,21 @@ export async function resolveLinksWithChunks(
             }
           }
         }
+
+        // Fallback for unknown/unmapped networks: if no known provider changed
+        // the link, try to recover a destination URL embedded directly in the
+        // query string. This is offline (no network request, so no phantom
+        // clicks) and handles the long tail of redirect wrappers that follow
+        // the common `?url=`/`?dest=` convention.
+        if (!changed) {
+          const embedded = extractEmbeddedUrl(currentLink);
+          if (embedded && embedded !== currentLink) {
+            console.log(`[${i + 1}] generic: ${currentLink} -> ${embedded}`);
+            currentLink = embedded;
+            changed = true;
+          }
+        }
+
         if (!changed) break; // If no affiliate matched or no change, stop
       }
 
