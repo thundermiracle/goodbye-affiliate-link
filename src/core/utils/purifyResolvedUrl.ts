@@ -1,3 +1,5 @@
+import { stripTrackingParams } from "./stripTrackingParams";
+
 const rakutenHostSuffix = ".rakuten.co.jp";
 
 function isRakutenDomain(hostname: string): boolean {
@@ -34,8 +36,10 @@ function purifyResolvedAmazonUrl(url: string, urlObj: URL): string {
 
 export function purifyResolvedUrl(url: string): string {
   try {
-    const urlObj = new URL(url);
-    let result = purifyResolvedRakutenUrl(url, urlObj);
+    // 1. Domain-agnostic: strip well-known tracking query params (utm_*, gclid,
+    //    fbclid, ...). 2. Domain-specific affiliate tags (Rakuten, Amazon).
+    let result = stripTrackingParams(url);
+    result = purifyResolvedRakutenUrl(result, new URL(result));
     result = purifyResolvedAmazonUrl(result, new URL(result));
     return result;
   } catch {

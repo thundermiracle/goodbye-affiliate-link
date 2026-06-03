@@ -20,9 +20,7 @@ describe("purifyResolvedUrl", () => {
   it("removes tag and linkCode from amazon domains", () => {
     const input =
       "https://www.amazon.co.jp/dp/B0DJDZRW18?tag=sakurachecker-22&linkCode=ogi&th=1&psc=1";
-    expect(purifyResolvedUrl(input)).toBe(
-      "https://www.amazon.co.jp/dp/B0DJDZRW18?th=1&psc=1",
-    );
+    expect(purifyResolvedUrl(input)).toBe("https://www.amazon.co.jp/dp/B0DJDZRW18?th=1&psc=1");
   });
 
   it("keeps non-amazon domains untouched for amazon params", () => {
@@ -33,5 +31,16 @@ describe("purifyResolvedUrl", () => {
   it("returns original amazon url when no affiliate params exist", () => {
     const input = "https://www.amazon.co.jp/dp/B0DJDZRW18?th=1&psc=1";
     expect(purifyResolvedUrl(input)).toBe(input);
+  });
+
+  it("strips generic tracking params on any domain", () => {
+    expect(purifyResolvedUrl("https://news.example/article?utm_source=tw&gclid=abc&id=5")).toBe(
+      "https://news.example/article?id=5",
+    );
+  });
+
+  it("strips generic tracking params alongside affiliate params", () => {
+    const input = "https://www.amazon.co.jp/dp/B0?tag=aff-22&utm_source=x&fbclid=y&th=1";
+    expect(purifyResolvedUrl(input)).toBe("https://www.amazon.co.jp/dp/B0?th=1");
   });
 });
