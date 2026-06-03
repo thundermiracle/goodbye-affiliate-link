@@ -1,141 +1,94 @@
 import { ResolveAffiliateLinksMessage, ResolveAffiliateLinksResponse } from "@/core";
 import { SETTINGS_KEYS, loadSettings } from "@/services/settings";
 
+// original href -> resolved href (resolved === original means "checked, no change")
 const resolvedCache = new Map<string, string>();
-const pendingLinks = new Set<string>();
-let resolveTimer: number | null = null;
-let observer: MutationObserver | null = null;
+// hrefs with an in-flight resolution request, to avoid duplicate messages
+const inFlight = new Set<string>();
+let listening = false;
 
-function applyResolvedLinks(anchors: HTMLAnchorElement[]) {
-  for (const anchor of anchors) {
-    const resolved = resolvedCache.get(anchor.href);
-    if (resolved && resolved !== anchor.href) {
-      resolvedCache.set(resolved, resolved);
-      anchor.href = resolved;
-    }
+// User-intent events that fire *before* navigation. Hover (pointerover) and
+// focus pre-resolve the link so the cleaned href is in place by the time the
+// user clicks; mousedown/touchstart are last-resort backstops. All bubble, so a
+// single delegated listener on document also covers dynamically-added anchors.
+const INTENT_EVENTS = ["pointerover", "focusin", "touchstart", "mousedown"] as const;
+
+function applyResolved(anchor: HTMLAnchorElement, originalHref: string, resolved: string) {
+  // Only rewrite if the anchor still points at the original affiliate URL.
+  if (resolved !== originalHref && anchor.href === originalHref) {
+    anchor.href = resolved;
   }
 }
 
-function scheduleResolveLinks() {
-  if (resolveTimer !== null) return;
-  resolveTimer = window.setTimeout(() => {
-    resolveTimer = null;
-    const links = Array.from(pendingLinks);
-    pendingLinks.clear();
+function resolveAnchor(anchor: HTMLAnchorElement) {
+  const href = anchor.href;
+  if (!href) return;
 
-    if (links.length === 0) return;
-
-    chrome.runtime.sendMessage<ResolveAffiliateLinksMessage, ResolveAffiliateLinksResponse>(
-      {
-        type: "RESOLVE_AFFILIATE_LINKS",
-        links,
-      },
-      (response) => {
-        if (!response) return;
-        for (const link of links) {
-          const resolved = response.resolvedLinks[link] ?? link;
-          resolvedCache.set(link, resolved);
-        }
-
-        applyResolvedLinks(Array.from(document.querySelectorAll<HTMLAnchorElement>("a")));
-      },
-    );
-  }, 150);
-}
-
-function enqueueAnchors(anchors: HTMLAnchorElement[]) {
-  let hasNewLinks = false;
-
-  for (const anchor of anchors) {
-    const link = anchor.href;
-    if (!link) continue;
-
-    const resolved = resolvedCache.get(link);
-    if (resolved) {
-      if (resolved !== link) {
-        anchor.href = resolved;
-      }
-      continue;
-    }
-
-    pendingLinks.add(link);
-    hasNewLinks = true;
+  const cached = resolvedCache.get(href);
+  if (cached !== undefined) {
+    applyResolved(anchor, href, cached);
+    return;
   }
 
-  if (hasNewLinks) {
-    scheduleResolveLinks();
+  if (inFlight.has(href)) return;
+  inFlight.add(href);
+
+  chrome.runtime.sendMessage<ResolveAffiliateLinksMessage, ResolveAffiliateLinksResponse>(
+    {
+      type: "RESOLVE_AFFILIATE_LINKS",
+      links: [href],
+    },
+    (response) => {
+      inFlight.delete(href);
+      if (chrome.runtime.lastError || !response) return;
+
+      const resolved = response.resolvedLinks[href] ?? href;
+      resolvedCache.set(href, resolved);
+      applyResolved(anchor, href, resolved);
+    },
+  );
+}
+
+function handleIntent(event: Event) {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const anchor = target.closest("a");
+  if (anchor instanceof HTMLAnchorElement) {
+    resolveAnchor(anchor);
   }
 }
 
-function stopObserving() {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-  pendingLinks.clear();
-  if (resolveTimer !== null) {
-    window.clearTimeout(resolveTimer);
-    resolveTimer = null;
+function startListening() {
+  if (listening) return;
+  listening = true;
+  for (const type of INTENT_EVENTS) {
+    document.addEventListener(type, handleIntent, { capture: true, passive: true });
   }
 }
 
-function observeAnchors() {
-  if (!document.body) return;
-
-  observer = new MutationObserver((mutations) => {
-    const anchors: HTMLAnchorElement[] = [];
-
-    for (const mutation of mutations) {
-      if (mutation.type === "attributes" && mutation.target instanceof HTMLAnchorElement) {
-        anchors.push(mutation.target);
-        continue;
-      }
-
-      mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLAnchorElement) {
-          anchors.push(node);
-          return;
-        }
-
-        if (node instanceof HTMLElement) {
-          anchors.push(...node.querySelectorAll<HTMLAnchorElement>("a"));
-        }
-      });
-    }
-
-    if (anchors.length > 0) {
-      enqueueAnchors(anchors);
-    }
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["href"],
-  });
-}
-
-function startProcessing() {
-  const anchorElements = Array.from(document.querySelectorAll<HTMLAnchorElement>("a"));
-  enqueueAnchors(anchorElements);
-  observeAnchors();
+function stopListening() {
+  if (!listening) return;
+  listening = false;
+  for (const type of INTENT_EVENTS) {
+    document.removeEventListener(type, handleIntent, { capture: true });
+  }
 }
 
 async function init() {
   const { enabled } = await loadSettings();
 
   if (enabled !== false) {
-    startProcessing();
+    startListening();
   }
 
   chrome.storage.onChanged.addListener((changes) => {
     if (changes[SETTINGS_KEYS.ENABLED]) {
       const isEnabled = changes[SETTINGS_KEYS.ENABLED].newValue === true;
       if (isEnabled) {
-        startProcessing();
+        startListening();
       } else {
-        stopObserving();
+        stopListening();
       }
     }
   });
