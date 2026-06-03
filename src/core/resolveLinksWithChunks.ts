@@ -1,5 +1,16 @@
 import { affiliateMap } from "./affiliateMap";
+import { resolveLinkOffline } from "./resolveLinkOffline";
+import { extractEmbeddedUrl } from "./utils/extractEmbeddedUrl";
 import { purifyResolvedUrl } from "./utils";
+
+export interface ResolveLinksOptions {
+  /**
+   * When true, only network-free (offline) resolvers run: no affiliate endpoint
+   * is ever contacted, so no affiliate click/conversion is triggered. Opaque
+   * redirect links whose destination only exists server-side are left untouched.
+   */
+  offline?: boolean;
+}
 
 /**
  * break array into chunks
@@ -18,16 +29,24 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 export async function resolveLinksWithChunks(
   links: string[],
   chunkSize: number = 5,
+  options: ResolveLinksOptions = {},
 ): Promise<Record<string, string>> {
+  const { offline = false } = options;
   const resolved: Record<string, string> = {};
   const chunks = chunkArray(links, chunkSize);
 
   for (const chunk of chunks) {
     const promises = chunk.map(async (initialLink) => {
+      // Offline mode never contacts the network: delegate to the pure resolver.
+      if (offline) {
+        return { link: initialLink, original: resolveLinkOffline(initialLink) };
+      }
+
       let currentLink = initialLink;
 
       for (let i = 0; i < 3; i++) {
         let changed = false;
+
         for (const [siteName, { isAffiliateLink, getOriginalLink }] of Object.entries(
           affiliateMap,
         )) {
@@ -47,6 +66,19 @@ export async function resolveLinksWithChunks(
             }
           }
         }
+
+        // Fallback for unknown/unmapped networks: recover a destination URL
+        // embedded directly in the query string (the common `?url=`/`?dest=`
+        // convention). Offline and network-free.
+        if (!changed) {
+          const embedded = extractEmbeddedUrl(currentLink);
+          if (embedded && embedded !== currentLink) {
+            console.log(`[${i + 1}] generic: ${currentLink} -> ${embedded}`);
+            currentLink = embedded;
+            changed = true;
+          }
+        }
+
         if (!changed) break; // If no affiliate matched or no change, stop
       }
 

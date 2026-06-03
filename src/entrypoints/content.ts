@@ -1,110 +1,28 @@
-import { ResolveAffiliateLinksMessage, ResolveAffiliateLinksResponse } from "@/core";
 import { SETTINGS_KEYS, loadSettings } from "@/services/settings";
+import { createLinkRewriter } from "@/services/rewriteLinks";
 
-const resolvedCache = new Map<string, string>();
-const pendingLinks = new Set<string>();
-let resolveTimer: number | null = null;
+// Pure, synchronous, network-free rewriting — resolving every link on the page
+// triggers no affiliate clicks/conversions.
+const { rewriteAnchor, rewriteWithin } = createLinkRewriter();
 let observer: MutationObserver | null = null;
 
-function applyResolvedLinks(anchors: HTMLAnchorElement[]) {
-  for (const anchor of anchors) {
-    const resolved = resolvedCache.get(anchor.href);
-    if (resolved && resolved !== anchor.href) {
-      resolvedCache.set(resolved, resolved);
-      anchor.href = resolved;
-    }
-  }
-}
-
-function scheduleResolveLinks() {
-  if (resolveTimer !== null) return;
-  resolveTimer = window.setTimeout(() => {
-    resolveTimer = null;
-    const links = Array.from(pendingLinks);
-    pendingLinks.clear();
-
-    if (links.length === 0) return;
-
-    chrome.runtime.sendMessage<ResolveAffiliateLinksMessage, ResolveAffiliateLinksResponse>(
-      {
-        type: "RESOLVE_AFFILIATE_LINKS",
-        links,
-      },
-      (response) => {
-        if (!response) return;
-        for (const link of links) {
-          const resolved = response.resolvedLinks[link] ?? link;
-          resolvedCache.set(link, resolved);
-        }
-
-        applyResolvedLinks(Array.from(document.querySelectorAll<HTMLAnchorElement>("a")));
-      },
-    );
-  }, 150);
-}
-
-function enqueueAnchors(anchors: HTMLAnchorElement[]) {
-  let hasNewLinks = false;
-
-  for (const anchor of anchors) {
-    const link = anchor.href;
-    if (!link) continue;
-
-    const resolved = resolvedCache.get(link);
-    if (resolved) {
-      if (resolved !== link) {
-        anchor.href = resolved;
-      }
-      continue;
-    }
-
-    pendingLinks.add(link);
-    hasNewLinks = true;
-  }
-
-  if (hasNewLinks) {
-    scheduleResolveLinks();
-  }
-}
-
-function stopObserving() {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-  pendingLinks.clear();
-  if (resolveTimer !== null) {
-    window.clearTimeout(resolveTimer);
-    resolveTimer = null;
-  }
-}
-
 function observeAnchors() {
-  if (!document.body) return;
+  if (!document.body || observer) return;
 
   observer = new MutationObserver((mutations) => {
-    const anchors: HTMLAnchorElement[] = [];
-
     for (const mutation of mutations) {
       if (mutation.type === "attributes" && mutation.target instanceof HTMLAnchorElement) {
-        anchors.push(mutation.target);
+        rewriteAnchor(mutation.target);
         continue;
       }
 
       mutation.addedNodes.forEach((node) => {
         if (node instanceof HTMLAnchorElement) {
-          anchors.push(node);
-          return;
-        }
-
-        if (node instanceof HTMLElement) {
-          anchors.push(...node.querySelectorAll<HTMLAnchorElement>("a"));
+          rewriteAnchor(node);
+        } else if (node instanceof HTMLElement) {
+          rewriteWithin(node);
         }
       });
-    }
-
-    if (anchors.length > 0) {
-      enqueueAnchors(anchors);
     }
   });
 
@@ -117,9 +35,15 @@ function observeAnchors() {
 }
 
 function startProcessing() {
-  const anchorElements = Array.from(document.querySelectorAll<HTMLAnchorElement>("a"));
-  enqueueAnchors(anchorElements);
+  rewriteWithin(document);
   observeAnchors();
+}
+
+function stopProcessing() {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
 }
 
 async function init() {
@@ -135,7 +59,7 @@ async function init() {
       if (isEnabled) {
         startProcessing();
       } else {
-        stopObserving();
+        stopProcessing();
       }
     }
   });
