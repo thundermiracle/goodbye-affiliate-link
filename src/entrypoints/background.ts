@@ -20,7 +20,11 @@ export default defineBackground(() => {
           links: message.links,
         });
 
-        resolveLinksWithChunks(message.links)
+        // offline: true — never contact an affiliate endpoint during automatic
+        // resolution, so no phantom clicks/conversions are triggered. Only links
+        // whose destination is embedded in the URL are restored; opaque redirect
+        // links are left untouched until the user actually clicks them.
+        resolveLinksWithChunks(message.links, 5, { offline: true })
           .then((resolvedLinks) => {
             sendResponse({ resolvedLinks });
           })

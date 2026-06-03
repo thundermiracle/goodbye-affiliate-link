@@ -65,4 +65,30 @@ describe("resolveLinksWithChunks", () => {
 
     expect(resolved).not.toHaveProperty(link);
   });
+
+  describe("offline mode", () => {
+    it("does NOT call any network provider (no affiliate endpoint contacted)", async () => {
+      const siteALink = "https://siteA.com/link";
+      const resolved = await resolveLinksWithChunks([siteALink], 5, { offline: true });
+
+      // The mocked providers (which would otherwise resolve siteA -> ... -> final)
+      // must be skipped entirely in offline mode, so the link stays untouched.
+      expect(resolved).not.toHaveProperty(siteALink);
+    });
+
+    it("still resolves embedded-url wrappers offline", async () => {
+      const link = "https://unknown-asp.example/redirect?url=https%3A%2F%2Fshop.example%2Fitem";
+      const resolved = await resolveLinksWithChunks([link], 5, { offline: true });
+
+      expect(resolved[link]).toBe("https://shop.example/item");
+    });
+
+    it("resolves rakuten pc/m params offline", async () => {
+      const link =
+        "https://hb.afl.rakuten.co.jp/ichiba/abc/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fshop%2F1";
+      const resolved = await resolveLinksWithChunks([link], 5, { offline: true });
+
+      expect(resolved[link]).toBe("https://item.rakuten.co.jp/shop/1");
+    });
+  });
 });
