@@ -9,7 +9,7 @@ export default defineConfig({
     name: "Goodbye Affiliate Link",
     description: "ページ中のアフィリエイトリンクを元々のURLに戻すChrome拡張機能です。",
     version: "1.0.0",
-    permissions: ["storage"],
+    permissions: ["storage", "cookies"],
     host_permissions: ["*://*/*"],
     browser_specific_settings: {
       gecko: {
