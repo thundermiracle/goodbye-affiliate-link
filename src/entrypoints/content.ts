@@ -1,9 +1,12 @@
 import { SETTINGS_KEYS, loadSettings } from "@/services/settings";
 import { createLinkRewriter } from "@/services/rewriteLinks";
+import { createOpaqueResolver } from "@/services/opaqueResolver";
 
 // Pure, synchronous, network-free rewriting — resolving every link on the page
 // triggers no affiliate clicks/conversions.
 const { rewriteAnchor, rewriteWithin } = createLinkRewriter();
+// Opt-in: cookieless on-hover resolution of opaque-token links (network).
+const opaqueResolver = createOpaqueResolver();
 let observer: MutationObserver | null = null;
 
 function observeAnchors() {
@@ -47,10 +50,11 @@ function stopProcessing() {
 }
 
 async function init() {
-  const { enabled } = await loadSettings();
+  const { enabled, resolveOpaque } = await loadSettings();
 
   if (enabled !== false) {
     startProcessing();
+    if (resolveOpaque) opaqueResolver.start();
   }
 
   chrome.storage.onChanged.addListener((changes) => {
@@ -60,6 +64,16 @@ async function init() {
         startProcessing();
       } else {
         stopProcessing();
+        opaqueResolver.stop();
+      }
+    }
+
+    if (changes[SETTINGS_KEYS.RESOLVE_OPAQUE]) {
+      const on = changes[SETTINGS_KEYS.RESOLVE_OPAQUE].newValue === true;
+      if (on) {
+        opaqueResolver.start();
+      } else {
+        opaqueResolver.stop();
       }
     }
   });

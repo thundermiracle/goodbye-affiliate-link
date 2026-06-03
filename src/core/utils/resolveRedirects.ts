@@ -17,6 +17,7 @@ export async function resolveRedirects(
     try {
       res = await fetch(url, {
         redirect: "manual",
+        credentials: "omit", // cookieless: never send/store affiliate cookies
         signal: controller.signal,
       });
     } catch (e: unknown) {
