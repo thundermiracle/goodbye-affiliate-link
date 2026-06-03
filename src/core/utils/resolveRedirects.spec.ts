@@ -84,4 +84,19 @@ describe("resolveRedirects", () => {
     const result = await resolveRedirects("http://example.com/error");
     expect(result).toBe("http://example.com/error");
   });
+
+  it("fetches cookielessly (credentials: omit)", async () => {
+    const mockFetch = global.fetch as any;
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      url: "http://example.com/x",
+      headers: { get: () => null },
+    });
+
+    await resolveRedirects("http://example.com/x");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://example.com/x",
+      expect.objectContaining({ credentials: "omit" }),
+    );
+  });
 });

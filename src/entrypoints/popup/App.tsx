@@ -60,6 +60,12 @@ function App() {
               defaultChecked={settings.enabled}
               onChange={(checked) => handleToggleChange(SETTINGS_KEYS.ENABLED, checked)}
             />
+            <ToggleSwitch
+              id="resolveOpaque"
+              label="不透明リンクもクリック時に解決（通信あり）"
+              defaultChecked={settings.resolveOpaque}
+              onChange={(checked) => handleToggleChange(SETTINGS_KEYS.RESOLVE_OPAQUE, checked)}
+            />
           </div>
         )}
 
