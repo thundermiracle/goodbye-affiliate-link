@@ -5,29 +5,24 @@ import { fixIncompleteUrl } from "./fixIncompleteUrl";
  * クエリパラメータ名（小文字）。許可リスト（affiliateMap）に無い未知ネットワークでも、
  * これらの慣習的なパラメータ名に宛先が埋め込まれていればオフラインで復元できる。
  *
- * 強いガードは「値そのものが絶対 http(s) URL であること」なので、検索語・アカウントID・
- * 不透明トークンといった非URLの値は自然に弾かれる。OAuth 系（redirect_uri / state /
- * continue / next 等）は誤検知でログインを壊す恐れがあるため意図的に除外している。
+ * このデコーダはページ上の全 `<a>` に対して走るため、誤検知は通常リンクの破壊に直結する。
+ * そこで「リダイレクト固有性が高い名前」だけに絞り、短く曖昧な名前
+ * （u / r / to / go / out / dest / target / redirect / goto / destination 等）は
+ * 意図的に除外している。これらは login / SSO / OAuth や同一サイト内ナビゲーションでも
+ * 使われ、書き換えるとログインフロー等を壊すため。
+ *
+ * 強いガードは「値そのものが（別ホストの）絶対 http(s) URL であること」なので、検索語・
+ * アカウントID・不透明トークン・相対パスといった値は、たとえ名前が一致しても弾かれる。
  */
 const REDIRECT_PARAM_NAMES = new Set([
   "url",
-  "u",
   "link",
-  "dest",
-  "destination",
-  "target",
-  "redirect",
   "redirect_url",
   "redirecturl",
-  "to",
-  "out",
-  "goto",
-  "go",
+  "rurl",
   "jump",
   "murl",
   "ued",
-  "r",
-  "rurl",
   "vc_url",
   "view_url",
   "a8ejpre",

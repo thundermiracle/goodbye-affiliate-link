@@ -11,17 +11,17 @@ describe("extractEmbeddedUrl", () => {
 
     it("handles double-encoded values", () => {
       const input =
-        "https://t.unknown.example/click?u=https%253A%252F%252Fshop.example%252Fp%253Fa%253D1";
+        "https://t.unknown.example/click?url=https%253A%252F%252Fshop.example%252Fp%253Fa%253D1";
       expect(extractEmbeddedUrl(input)).toBe("https://shop.example/p?a=1");
     });
 
     it("accepts protocol-relative embedded urls", () => {
-      const input = "https://go.unknown.example/?to=%2F%2Fshop.example%2Fdeal";
+      const input = "https://go.unknown.example/?url=%2F%2Fshop.example%2Fdeal";
       expect(extractEmbeddedUrl(input)).toBe("https://shop.example/deal");
     });
 
-    it("recognizes various redirect param names", () => {
-      const names = ["dest", "destination", "target", "redirect", "out", "goto", "jump", "murl"];
+    it("recognizes the curated redirect param names", () => {
+      const names = ["url", "link", "redirect_url", "rurl", "jump", "murl", "ued", "vc_url"];
       for (const name of names) {
         const input = `https://wrap.example/go?${name}=https://shop.example/x`;
         expect(extractEmbeddedUrl(input)).toBe("https://shop.example/x");
@@ -50,6 +50,28 @@ describe("extractEmbeddedUrl", () => {
       const input =
         "https://auth.example/authorize?redirect_uri=https%3A%2F%2Fapp.other.example%2Fcb&state=xyz";
       expect(extractEmbeddedUrl(input)).toBeNull();
+    });
+
+    it("ignores ambiguous login/SSO/nav param names even with a cross-host URL", () => {
+      // These names are deliberately excluded because login/SSO/OAuth and in-site
+      // navigation use them; rewriting would break the flow. All point cross-host
+      // to a real http URL, so only the param-name exclusion protects them.
+      const excluded = [
+        "redirect",
+        "u",
+        "r",
+        "to",
+        "go",
+        "out",
+        "dest",
+        "target",
+        "goto",
+        "destination",
+      ];
+      for (const name of excluded) {
+        const input = `https://site.example/login?${name}=https://app.other.example/dashboard`;
+        expect(extractEmbeddedUrl(input)).toBeNull();
+      }
     });
 
     it("skips known social-share / proxy hosts even with a url= param", () => {
