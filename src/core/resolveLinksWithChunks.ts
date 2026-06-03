@@ -1,5 +1,5 @@
 import { affiliateMap } from "./affiliateMap";
-import { getRakutenOriginalOffline } from "./rakuten/getRakutenOriginalOffline";
+import { resolveLinkOffline } from "./resolveLinkOffline";
 import { extractEmbeddedUrl } from "./utils/extractEmbeddedUrl";
 import { purifyResolvedUrl } from "./utils";
 
@@ -37,56 +37,44 @@ export async function resolveLinksWithChunks(
 
   for (const chunk of chunks) {
     const promises = chunk.map(async (initialLink) => {
+      // Offline mode never contacts the network: delegate to the pure resolver.
+      if (offline) {
+        return { link: initialLink, original: resolveLinkOffline(initialLink) };
+      }
+
       let currentLink = initialLink;
 
       for (let i = 0; i < 3; i++) {
         let changed = false;
 
-        // Known providers may contact the network (follow redirects), so they
-        // only run when offline mode is off.
-        if (!offline) {
-          for (const [siteName, { isAffiliateLink, getOriginalLink }] of Object.entries(
-            affiliateMap,
-          )) {
-            if (isAffiliateLink(currentLink)) {
-              try {
-                const nextLink = await getOriginalLink(currentLink);
-                if (nextLink !== currentLink) {
-                  console.log(`[${i + 1}] ${siteName}: ${currentLink} -> ${nextLink}`);
-                  currentLink = nextLink;
-                  changed = true;
-                  break; // Move to next iteration of depth loop with new link
-                }
-              } catch (e) {
-                console.error(`Failed to resolve ${currentLink} for ${siteName}`, e);
-                // If error, stop resolving this chain
-                return { link: initialLink, original: currentLink };
+        for (const [siteName, { isAffiliateLink, getOriginalLink }] of Object.entries(
+          affiliateMap,
+        )) {
+          if (isAffiliateLink(currentLink)) {
+            try {
+              const nextLink = await getOriginalLink(currentLink);
+              if (nextLink !== currentLink) {
+                console.log(`[${i + 1}] ${siteName}: ${currentLink} -> ${nextLink}`);
+                currentLink = nextLink;
+                changed = true;
+                break; // Move to next iteration of depth loop with new link
               }
+            } catch (e) {
+              console.error(`Failed to resolve ${currentLink} for ${siteName}`, e);
+              // If error, stop resolving this chain
+              return { link: initialLink, original: currentLink };
             }
           }
         }
 
-        // Network-free extractors. In offline mode these are the ONLY resolvers,
-        // so no affiliate endpoint is ever contacted and no click is triggered;
-        // opaque links (destination only known server-side) are left untouched.
-        // In online mode they act as a fallback for unknown wrappers after the
-        // known providers above (the common `?url=`/`?dest=` convention).
+        // Fallback for unknown/unmapped networks: recover a destination URL
+        // embedded directly in the query string (the common `?url=`/`?dest=`
+        // convention). Offline and network-free.
         if (!changed) {
           const embedded = extractEmbeddedUrl(currentLink);
           if (embedded && embedded !== currentLink) {
             console.log(`[${i + 1}] generic: ${currentLink} -> ${embedded}`);
             currentLink = embedded;
-            changed = true;
-          }
-        }
-
-        // Rakuten embeds the destination in pc/m params; cover it offline since
-        // the generic decoder intentionally excludes such short, ambiguous names.
-        if (!changed && offline) {
-          const rakuten = getRakutenOriginalOffline(currentLink);
-          if (rakuten && rakuten !== currentLink) {
-            console.log(`[${i + 1}] rakuten(offline): ${currentLink} -> ${rakuten}`);
-            currentLink = rakuten;
             changed = true;
           }
         }
