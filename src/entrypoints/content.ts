@@ -67,6 +67,10 @@ async function init() {
       const isEnabled = changes[SETTINGS_KEYS.ENABLED].newValue === true;
       if (isEnabled) {
         startProcessing();
+        // resolveOpaque is still on in storage — bring its resolver back too.
+        loadSettings().then(({ resolveOpaque }) => {
+          if (resolveOpaque) opaqueResolver.start();
+        });
       } else {
         stopProcessing();
         opaqueResolver.stop();
