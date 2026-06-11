@@ -56,6 +56,25 @@ describe("purifyResolvedUrl", () => {
     expect(purifyResolvedUrl(input)).toBe(input);
   });
 
+  it("removes ValueCommerce attribution (sc_e) from Yahoo! Shopping urls", () => {
+    const input =
+      "https://store.shopping.yahoo.co.jp/shop/item.html?sc_e=afvc_xyz_123&sc_i=shp_pc&color=red";
+    expect(purifyResolvedUrl(input)).toBe(
+      "https://store.shopping.yahoo.co.jp/shop/item.html?color=red",
+    );
+  });
+
+  it("keeps sc_e on non-shopping yahoo domains", () => {
+    const input = "https://news.yahoo.co.jp/articles/abc?sc_e=xyz";
+    expect(purifyResolvedUrl(input)).toBe(input);
+  });
+
+  it("removes eBay Partner Network params from ebay domains", () => {
+    const input =
+      "https://www.ebay.com/itm/123456?mkcid=1&mkrid=711-53200-19255-0&campid=5338&customid=x&toolid=10001&hash=item1";
+    expect(purifyResolvedUrl(input)).toBe("https://www.ebay.com/itm/123456?hash=item1");
+  });
+
   it("strips generic tracking params on any domain", () => {
     expect(purifyResolvedUrl("https://news.example/article?utm_source=tw&gclid=abc&id=5")).toBe(
       "https://news.example/article?id=5",
