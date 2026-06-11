@@ -33,6 +33,29 @@ describe("purifyResolvedUrl", () => {
     expect(purifyResolvedUrl(input)).toBe(input);
   });
 
+  it("removes associate params on every amazon TLD", () => {
+    expect(purifyResolvedUrl("https://www.amazon.com/dp/B0?tag=x-20&linkId=abc&th=1")).toBe(
+      "https://www.amazon.com/dp/B0?th=1",
+    );
+    expect(purifyResolvedUrl("https://www.amazon.de/dp/B0?tag=x-21&ascsubtag=s")).toBe(
+      "https://www.amazon.de/dp/B0",
+    );
+  });
+
+  it("strips the trailing /ref= attribution path segment on amazon", () => {
+    expect(purifyResolvedUrl("https://www.amazon.co.jp/dp/B08JLZV7G1/ref=nosim?tag=x-22")).toBe(
+      "https://www.amazon.co.jp/dp/B08JLZV7G1",
+    );
+    expect(purifyResolvedUrl("https://www.amazon.co.jp/dp/B08JLZV7G1/ref=as_li_ss_tl")).toBe(
+      "https://www.amazon.co.jp/dp/B08JLZV7G1",
+    );
+  });
+
+  it("keeps /ref= path segments on non-amazon domains", () => {
+    const input = "https://example.com/dp/B08JLZV7G1/ref=nosim";
+    expect(purifyResolvedUrl(input)).toBe(input);
+  });
+
   it("strips generic tracking params on any domain", () => {
     expect(purifyResolvedUrl("https://news.example/article?utm_source=tw&gclid=abc&id=5")).toBe(
       "https://news.example/article?id=5",

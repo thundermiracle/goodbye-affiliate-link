@@ -6,9 +6,30 @@ function isRakutenDomain(hostname: string): boolean {
   return hostname === "rakuten.co.jp" || hostname.endsWith(rakutenHostSuffix);
 }
 
+/** Every Amazon retail TLD (amazon.co.jp, amazon.com, amazon.de, ...). */
+const amazonHostRegex =
+  /(^|\.)amazon\.(com|co\.jp|co\.uk|de|fr|it|es|ca|cn|in|nl|se|pl|sg|ae|sa|eg|com\.au|com\.br|com\.mx|com\.tr|com\.be)$/;
+
 function isAmazonDomain(hostname: string): boolean {
-  return hostname === "amazon.co.jp" || hostname.endsWith(".amazon.co.jp");
+  return amazonHostRegex.test(hostname);
 }
+
+/**
+ * Amazon Associates attribution params. All are commission/campaign metadata —
+ * none affect which product page is shown, so removing them is lossless.
+ */
+const AMAZON_AFFILIATE_PARAMS = [
+  "tag",
+  "linkCode",
+  "linkId",
+  "creative",
+  "creativeASIN",
+  "camp",
+  "ascsubtag",
+  "asc_campaign",
+  "asc_refurl",
+  "asc_source",
+];
 
 function purifyResolvedRakutenUrl(url: string, urlObj: URL): string {
   if (!isRakutenDomain(urlObj.hostname)) return url;
@@ -25,13 +46,24 @@ function purifyResolvedRakutenUrl(url: string, urlObj: URL): string {
 function purifyResolvedAmazonUrl(url: string, urlObj: URL): string {
   if (!isAmazonDomain(urlObj.hostname)) return url;
 
-  const hasTag = urlObj.searchParams.has("tag");
-  const hasLinkCode = urlObj.searchParams.has("linkCode");
-  if (!hasTag && !hasLinkCode) return url;
+  let changed = false;
+  for (const param of AMAZON_AFFILIATE_PARAMS) {
+    if (urlObj.searchParams.has(param)) {
+      urlObj.searchParams.delete(param);
+      changed = true;
+    }
+  }
 
-  urlObj.searchParams.delete("tag");
-  urlObj.searchParams.delete("linkCode");
-  return urlObj.toString();
+  // SiteStripe/associate links carry an attribution breadcrumb as the final
+  // path segment (/dp/ASIN/ref=nosim, .../ref=as_li_ss_tl). Product pages work
+  // identically without it.
+  const refMatch = /^(.*)\/ref=[^/]*\/?$/.exec(urlObj.pathname);
+  if (refMatch) {
+    urlObj.pathname = refMatch[1] || "/";
+    changed = true;
+  }
+
+  return changed ? urlObj.toString() : url;
 }
 
 export function purifyResolvedUrl(url: string): string {
