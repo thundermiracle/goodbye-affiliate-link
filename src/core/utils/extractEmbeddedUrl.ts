@@ -27,7 +27,38 @@ const REDIRECT_PARAM_NAMES = new Set([
   "view_url",
   "a8ejpre",
   "a8ejpredirect",
+  // ネットワーク固有だが名前の識別性が高く、グローバル適用しても安全なもの
+  "lurl", // DMMアフィリエイト (al.dmm.co.jp/?lurl=...)
+  "mpre", // eBay Partner Network (rover.ebay.com ...&mpre=...)
+  "urllink", // ShareASale (shareasale.com/r.cfm?...&urllink=...)
+  "dl_target_url", // AliExpress (s.click.aliexpress.com/deep_link.htm)
+  "wgtarget", // Webgains (track.webgains.com/click.html?...&wgtarget=...)
 ]);
+
+/**
+ * 「u」のような短く曖昧な名前は、グローバルには適用できない（OAuth等を壊す）が、
+ * 宛先パラメータであることが確実な特定ホストに限れば安全に復元できる。
+ * SNSの outbound クリック計測ラッパー（l.facebook.com 等）もここで剥がす —
+ * シェア「インテント」(facebook.com/sharer) と違い、これらは単なる追跡付き
+ * リダイレクトなので直リンク化はページを壊さない。
+ */
+const HOST_PARAM_OVERRIDES = new Map<string, Set<string>>([
+  ["redirect.viglink.com", new Set(["u"])], // VigLink / Sovrn
+  ["l.facebook.com", new Set(["u"])],
+  ["lm.facebook.com", new Set(["u"])],
+  ["l.instagram.com", new Set(["u"])],
+  ["l.messenger.com", new Set(["u"])],
+]);
+
+/**
+ * クエリではなくパス末尾に宛先URLを連結する「パス埋め込み」ディープリンク形式。
+ * マーカー自体の識別性が高く、抽出値も通常の検証（別ホストの絶対 http(s) URL）を
+ * 通すため、ホスト非依存で安全に適用できる。
+ *  - CJ (Commission Junction): https://www.anrdoezrs.net/links/<id>/type/dlg/<URL>
+ *    (dpbolvw.net / tkqlhce.com / kqzyfj.com / jdoqocy.com も同形式)
+ *  - Partnerize: https://<brand>.prf.hn/click/camref:<id>/destination:<URL>
+ */
+const PATH_EMBED_MARKERS = ["/type/dlg/", "/destination:"];
 
 /**
  * `url=` 系のパラメータを持つが「リダイレクトではない」ホスト
@@ -72,15 +103,43 @@ function decodeMaybe(value: string): string {
 }
 
 /**
- * ラッパーURLのクエリパラメータから、埋め込まれた宛先URLをオフラインで抽出する。
+ * 候補文字列を検証し、合格すれば正規化済みの宛先URLを返す。
+ * 条件: （最大3回デコード後に）絶対 http(s) URL で、ラッパーと異なるホストであること。
+ * 同一ホストへの遷移は「次へ」「戻る」等のナビゲーション用パラメータの可能性が高く、
+ * アフィリエイトのクロスサイトリダイレクトではないため除外する。
+ */
+function validateCandidate(rawValue: string, wrapperHost: string): string | null {
+  if (!rawValue) return null;
+
+  let candidate = decodeMaybe(rawValue);
+  // ShareASale の urllink= 等はスキーム無し（www.merchant.com/...）で宛先を載せる。
+  // 許可済みパラメータ/マーカーの値に限った補完なので誤検知リスクは低い。
+  if (/^www\./i.test(candidate)) candidate = "https://" + candidate;
+  candidate = fixIncompleteUrl(candidate);
+  if (!/^https?:\/\//i.test(candidate)) return null;
+
+  let embedded: URL;
+  try {
+    embedded = new URL(candidate);
+  } catch {
+    return null;
+  }
+
+  if (embedded.hostname.toLowerCase() === wrapperHost) return null;
+
+  return embedded.toString();
+}
+
+/**
+ * ラッパーURLから、埋め込まれた宛先URLをオフラインで抽出する。
  * ネットワークリクエストを一切発生させない純粋関数。
  *
- * 以下を全て満たす場合のみ宛先を返す（さもなくば null）:
- *  1. URL としてパースできる
- *  2. ホストが除外リストに無い
- *  3. リダイレクト系のパラメータ名を持つ
- *  4. その値が（最大3回デコード後に）絶対 http(s) URL である
- *  5. 抽出先のホストがラッパーと異なる（同一サイト内ナビゲーション用パラメータの誤検知防止）
+ * 抽出元は次の3系統（上から順に試す）:
+ *  a. グローバル許可リストのクエリパラメータ（REDIRECT_PARAM_NAMES）
+ *  b. ホスト限定の短い名前（HOST_PARAM_OVERRIDES — viglink/l.facebook 等の `u`）
+ *  c. パス埋め込み形式（PATH_EMBED_MARKERS — CJ `/type/dlg/`、Partnerize `/destination:`）
+ *
+ * いずれも値が検証（validateCandidate: 別ホストの絶対 http(s) URL）を通った場合のみ返す。
  *
  * @param url 例: https://unknown-asp.example/redirect?url=https%3A%2F%2Fshop.example%2Fitem
  */
@@ -97,27 +156,22 @@ export function extractEmbeddedUrl(url: string): string | null {
     return null;
   }
 
+  const hostParams = HOST_PARAM_OVERRIDES.get(wrapperHost);
+
   for (const [name, rawValue] of wrapper.searchParams.entries()) {
-    if (!REDIRECT_PARAM_NAMES.has(name.toLowerCase())) continue;
-    if (!rawValue) continue;
+    const paramName = name.toLowerCase();
+    if (!REDIRECT_PARAM_NAMES.has(paramName) && !hostParams?.has(paramName)) continue;
 
-    const candidate = fixIncompleteUrl(decodeMaybe(rawValue));
-    if (!/^https?:\/\//i.test(candidate)) continue;
+    const embedded = validateCandidate(rawValue, wrapperHost);
+    if (embedded) return embedded;
+  }
 
-    let embedded: URL;
-    try {
-      embedded = new URL(candidate);
-    } catch {
-      continue;
-    }
+  for (const marker of PATH_EMBED_MARKERS) {
+    const index = url.indexOf(marker);
+    if (index === -1) continue;
 
-    // 同一ホストへの遷移は「次へ」「戻る」等のナビゲーション用パラメータの可能性が高く、
-    // アフィリエイトのクロスサイトリダイレクトではないため除外する。
-    if (embedded.hostname.toLowerCase() === wrapperHost) {
-      continue;
-    }
-
-    return embedded.toString();
+    const embedded = validateCandidate(url.slice(index + marker.length), wrapperHost);
+    if (embedded) return embedded;
   }
 
   return null;

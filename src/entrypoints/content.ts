@@ -1,10 +1,13 @@
 import { SETTINGS_KEYS, loadSettings } from "@/services/settings";
-import { createLinkRewriter } from "@/services/rewriteLinks";
+import { createClickGuard, createLinkRewriter } from "@/services/rewriteLinks";
 import { createOpaqueResolver } from "@/services/opaqueResolver";
 
 // Pure, synchronous, network-free rewriting — resolving every link on the page
 // triggers no affiliate clicks/conversions.
 const { rewriteAnchor, rewriteWithin } = createLinkRewriter();
+// Last-moment re-rewrite on click, for sites that swap the href back to the
+// affiliate URL on mousedown/click.
+const clickGuard = createClickGuard(rewriteAnchor);
 // Opt-in: cookieless on-hover resolution of opaque-token links (network).
 const opaqueResolver = createOpaqueResolver();
 let observer: MutationObserver | null = null;
@@ -40,6 +43,7 @@ function observeAnchors() {
 function startProcessing() {
   rewriteWithin(document);
   observeAnchors();
+  clickGuard.start();
 }
 
 function stopProcessing() {
@@ -47,6 +51,7 @@ function stopProcessing() {
     observer.disconnect();
     observer = null;
   }
+  clickGuard.stop();
 }
 
 async function init() {
@@ -62,6 +67,10 @@ async function init() {
       const isEnabled = changes[SETTINGS_KEYS.ENABLED].newValue === true;
       if (isEnabled) {
         startProcessing();
+        // resolveOpaque is still on in storage — bring its resolver back too.
+        loadSettings().then(({ resolveOpaque }) => {
+          if (resolveOpaque) opaqueResolver.start();
+        });
       } else {
         stopProcessing();
         opaqueResolver.stop();

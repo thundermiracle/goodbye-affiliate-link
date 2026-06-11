@@ -20,6 +20,12 @@ export const AFFILIATE_COOKIE_DOMAINS = [
   "link-ag.net",
   "afi-b.com",
   "felmat.net",
+  "j-a-net.jp", // JANet
+  "tcs-asp.net", // TCSアフィリエイト
+  "rentracks.jp", // レントラックス
+  "infotop.jp",
+  "mobu.jp", // Zucks (get.mobu.jp redirect)
+  "smart-c.jp", // Smart-C (アドウェイズ)
   // Global
   "linksynergy.com", // Rakuten Advertising / LinkShare
   "dpbolvw.net", // Commission Junction
@@ -29,9 +35,17 @@ export const AFFILIATE_COOKIE_DOMAINS = [
   "jdoqocy.com",
   "awin1.com", // Awin
   "prf.hn", // Impact / Partnerize
+  "sjv.io", // Impact tracking domains (per-merchant subdomains)
+  "pxf.io",
+  "evyy.net",
+  "7eer.net",
   "shareasale.com",
   "skimresources.com", // Skimlinks
   "go.redirectingat.com",
+  "viglink.com", // VigLink / Sovrn
+  "clickbank.net", // ClickBank (hop.clickbank.net)
+  "tradedoubler.com",
+  "webgains.com",
 ] as const;
 
 /**

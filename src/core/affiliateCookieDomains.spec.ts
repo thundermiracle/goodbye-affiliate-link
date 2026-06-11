@@ -16,6 +16,19 @@ describe("isAffiliateCookieDomain", () => {
       ".afl.rakuten.co.jp",
       "linksynergy.com",
       "click.linksynergy.com",
+      "j-a-net.jp",
+      "click.j-a-net.jp",
+      "px.tcs-asp.net",
+      "www.rentracks.jp",
+      "infotop.jp",
+      "get.mobu.jp",
+      "ad.smart-c.jp",
+      "pollen.sjv.io",
+      "brand.pxf.io",
+      "hop.clickbank.net",
+      "redirect.viglink.com",
+      "clk.tradedoubler.com",
+      "track.webgains.com",
     ]) {
       expect(isAffiliateCookieDomain(d)).toBe(true);
     }

@@ -35,3 +35,48 @@ export function createLinkRewriter() {
 
   return { rewriteAnchor, rewriteWithin };
 }
+
+/**
+ * Final safety net for sites that keep a clean href and swap in the affiliate
+ * URL only at interaction time (onmousedown / click handlers), defeating
+ * one-shot rewriting. Re-running the cached, synchronous offline rewrite during
+ * click/auxclick dispatch wins that race: it runs after their swap but before
+ * the browser follows the link.
+ *
+ * Registered in BOTH phases: capture (fires even if a handler later stops
+ * propagation) and bubble at the document root (fires after the target's own
+ * click handlers, catching swaps done inside them).
+ */
+export function createClickGuard(rewriteAnchor: (anchor: HTMLAnchorElement) => void) {
+  const CLICK_EVENTS = ["click", "auxclick"] as const;
+  let listening = false;
+
+  function handleClick(event: Event) {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const anchor = target.closest("a");
+    if (anchor instanceof HTMLAnchorElement) {
+      rewriteAnchor(anchor);
+    }
+  }
+
+  function start() {
+    if (listening) return;
+    listening = true;
+    for (const type of CLICK_EVENTS) {
+      document.addEventListener(type, handleClick, { capture: true });
+      document.addEventListener(type, handleClick, { capture: false });
+    }
+  }
+
+  function stop() {
+    if (!listening) return;
+    listening = false;
+    for (const type of CLICK_EVENTS) {
+      document.removeEventListener(type, handleClick, { capture: true });
+      document.removeEventListener(type, handleClick, { capture: false });
+    }
+  }
+
+  return { start, stop };
+}

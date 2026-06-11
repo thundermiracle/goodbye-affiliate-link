@@ -18,6 +18,17 @@ describe("stripTrackingParams", () => {
     expect(stripTrackingParams(input)).toBe("https://shop.example/p?ok=1");
   });
 
+  it("removes affiliate-network click-ids used for cookieless attribution", () => {
+    const input =
+      "https://shop.example/p?cjevent=abc&irclickid=def&sscid=ghi&awc=123_456&srsltid=AfmBOo&keep=1";
+    expect(stripTrackingParams(input)).toBe("https://shop.example/p?keep=1");
+  });
+
+  it("removes Rakuten Advertising deep-link params (ranMID/ranEAID/ranSiteID)", () => {
+    const input = "https://shop.example/item?ranMID=1234&ranEAID=abc&ranSiteID=xyz-_-&id=5";
+    expect(stripTrackingParams(input)).toBe("https://shop.example/item?id=5");
+  });
+
   it("removes the query string entirely when only tracking params remain", () => {
     expect(stripTrackingParams("https://shop.example/p?utm_source=x&fbclid=y")).toBe(
       "https://shop.example/p",

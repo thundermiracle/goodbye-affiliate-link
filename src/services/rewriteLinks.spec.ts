@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createLinkRewriter } from "./rewriteLinks";
+import { createClickGuard, createLinkRewriter } from "./rewriteLinks";
 
 describe("createLinkRewriter", () => {
   beforeEach(() => {
@@ -51,5 +51,59 @@ describe("createLinkRewriter", () => {
     // Re-running on the now-resolved anchor must leave it stable (no loop).
     rewriter.rewriteAnchor(a);
     expect(a.href).toBe("https://shop.example/p");
+  });
+});
+
+describe("createClickGuard", () => {
+  const AFFILIATE = "https://unknown-asp.example/redirect?url=https%3A%2F%2Fshop.example%2Fitem";
+  const CLEAN = "https://shop.example/item";
+
+  let anchor: HTMLAnchorElement;
+  let guard: ReturnType<typeof createClickGuard>;
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    anchor = document.createElement("a");
+    document.body.appendChild(anchor);
+    // keep jsdom from attempting real navigation on unhandled clicks
+    document.body.addEventListener("click", (e) => e.preventDefault());
+
+    guard = createClickGuard(createLinkRewriter().rewriteAnchor);
+    guard.start();
+  });
+
+  it("re-rewrites an href swapped to an affiliate url on mousedown", () => {
+    anchor.href = CLEAN;
+    anchor.addEventListener("mousedown", () => {
+      anchor.href = AFFILIATE;
+    });
+
+    anchor.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(anchor.href).toBe(AFFILIATE); // the cloaker won the mousedown...
+
+    anchor.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    expect(anchor.href).toBe(CLEAN); // ...but the click guard wins the click
+
+    guard.stop();
+  });
+
+  it("re-rewrites when the swap happens inside the anchor's own click handler", () => {
+    anchor.href = CLEAN;
+    anchor.addEventListener("click", () => {
+      anchor.href = AFFILIATE;
+    });
+
+    anchor.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    expect(anchor.href).toBe(CLEAN); // document-level bubble listener ran last
+
+    guard.stop();
+  });
+
+  it("does nothing after stop()", () => {
+    guard.stop();
+    anchor.href = AFFILIATE;
+
+    anchor.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    expect(anchor.href).toBe(AFFILIATE);
   });
 });

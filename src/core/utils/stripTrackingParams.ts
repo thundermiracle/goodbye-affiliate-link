@@ -31,6 +31,18 @@ const TRACKING_PARAMS = new Set([
   "twclid",
   "ttclid",
   "li_fat_id",
+  // Affiliate-network click-ids appended to MERCHANT urls for server-side
+  // (cookieless) attribution. Names are network-specific, so removing them
+  // globally is safe — and it cuts attribution the cookie cleaner can't reach.
+  "srsltid", // Google Merchant Center auto-tagging
+  "cjevent", // Commission Junction
+  "cjdata",
+  "irclickid", // Impact
+  "sscid", // ShareASale
+  "awc", // Awin
+  "ranmid", // Rakuten Advertising / LinkShare deep links
+  "raneaid",
+  "ransiteid",
   // misc analytics click-ids
   "_openstat",
   "vero_id",
