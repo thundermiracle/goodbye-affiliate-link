@@ -3,6 +3,7 @@ import * as accesstrade from "./accesstrade";
 import * as amazon from "./amazon";
 import * as linka from "./linka";
 import * as moshimo from "./moshimo";
+import * as opaque from "./opaque";
 import * as rakuten from "./rakuten";
 import * as valuecommerce from "./valuecommerce";
 import * as zucks from "./zucks";
@@ -46,5 +47,11 @@ export const affiliateMap: AffiliateMap = {
   zucks: {
     isAffiliateLink: zucks.isZucks,
     getOriginalLink: zucks.getZucksOriginal,
+  },
+  // 固有プロバイダに該当しない既知の不透明リダイレクト群 (afb/felmat/JANet/...)。
+  // Object.entries の挿入順で最後に評価されるよう、末尾に置く。
+  opaque: {
+    isAffiliateLink: opaque.isOpaqueRedirect,
+    getOriginalLink: opaque.getOpaqueRedirectOriginal,
   },
 };
